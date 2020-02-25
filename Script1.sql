@@ -36,14 +36,17 @@ order by count(distinct user_id) desc limit 5;
 
 -- Запрос 2: 2.	Список пользователей, у которых вчера был сначала просмотр с organic, а сразу следом за ним - просмотр с referral
 
--- пока что показывает пользователей, у которых вчера первым просмотром был organic
+-- пока что показывает пользователей, у который 1-й просмотр organic, а 2-й referral
 
 with org_ref_table as (
 select user_id, utm_medium, ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY show_date) as show_order
 from content_watch
-where date(show_date) = date(timestamp 'yesterday')
+--where date(show_date) = date(timestamp 'yesterday')
 )
-select user_id, utm_medium, show_order
+select user_id
 from org_ref_table
-where show_order=1 and utm_medium='organic'
+where concat(utm_medium, show_order) = 'organic1'
+	or concat(utm_medium, show_order) = 'referral2'
+group by user_id
+having count(*)>1
 order by user_id;
