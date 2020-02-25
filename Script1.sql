@@ -1,10 +1,10 @@
 -- PostgeSQL
 
--- Для отладки создаем таблицы, в которые импортируем данные из задания
+-- Р”Р»СЏ РѕС‚Р»Р°РґРєРё СЃРѕР·РґР°РµРј С‚Р°Р±Р»РёС†С‹, РІ РєРѕС‚РѕСЂС‹Рµ РёРјРїРѕСЂС‚РёСЂСѓРµРј РґР°РЅРЅС‹Рµ РёР· Р·Р°РґР°РЅРёСЏ
 create table content_watch ( watch_id varchar PRIMARY key,	show_date timestamp,	show_duration int,	platform varchar,	user_id varchar,	utm_medium varchar,	content_id varchar);
 create table content_info ( content_id varchar PRIMARY key,	compilation_id varchar,	episode varchar,	paid_type char(4))
 
--- Запрос 0: На каждый день количество просмотров отдельно по монетизациям SVOD и AVOD на платформах 10 и 11 за последние 30 дней.
+-- Р—Р°РїСЂРѕСЃ 0: РќР° РєР°Р¶РґС‹Р№ РґРµРЅСЊ РєРѕР»РёС‡РµСЃС‚РІРѕ РїСЂРѕСЃРјРѕС‚СЂРѕРІ РѕС‚РґРµР»СЊРЅРѕ РїРѕ РјРѕРЅРµС‚РёР·Р°С†РёСЏРј SVOD Рё AVOD РЅР° РїР»Р°С‚С„РѕСЂРјР°С… 10 Рё 11 Р·Р° РїРѕСЃР»РµРґРЅРёРµ 30 РґРЅРµР№.
 
 select DATE(show_date), paid_type, count(*)
 from content_watch w left join content_info i on w.content_id=i.content_id 
@@ -14,9 +14,9 @@ group by date(show_date),paid_type
 order by date(show_date), paid_type limit 60;
 
 
--- Запрос 1: Ежемесячный ТОП-5 сериалов и ТОП-5 единичного контента по количеству смотрящих людей
+-- Р—Р°РїСЂРѕСЃ 1: Р•Р¶РµРјРµСЃСЏС‡РЅС‹Р№ РўРћРџ-5 СЃРµСЂРёР°Р»РѕРІ Рё РўРћРџ-5 РµРґРёРЅРёС‡РЅРѕРіРѕ РєРѕРЅС‚РµРЅС‚Р° РїРѕ РєРѕР»РёС‡РµСЃС‚РІСѓ СЃРјРѕС‚СЂСЏС‰РёС… Р»СЋРґРµР№
 
--- для топ-5 сериалов
+-- РґР»СЏ С‚РѕРї-5 СЃРµСЂРёР°Р»РѕРІ
 select  i.compilation_id, count(distinct user_id)
 from content_watch w left join content_info i on w.content_id=i.content_id
 where date_part('month', show_date)= date_part('month', now()) 
@@ -25,7 +25,7 @@ and compilation_id is not null
 group by i.compilation_id
 order by count(distinct user_id) desc limit 5;
 
--- для топ-5 единичного контента
+-- РґР»СЏ С‚РѕРї-5 РµРґРёРЅРёС‡РЅРѕРіРѕ РєРѕРЅС‚РµРЅС‚Р°
 select  count(distinct user_id),i.content_id
 from content_watch w left join content_info i on w.content_id=i.content_id
 where date_part('month', show_date)= date_part('month', now()) 
@@ -34,9 +34,9 @@ where date_part('month', show_date)= date_part('month', now())
 group by i.content_id
 order by count(distinct user_id) desc limit 5;
 
--- Запрос 2: 2.	Список пользователей, у которых вчера был сначала просмотр с organic, а сразу следом за ним - просмотр с referral
+-- Р—Р°РїСЂРѕСЃ 2: 2.	РЎРїРёСЃРѕРє РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№, Сѓ РєРѕС‚РѕСЂС‹С… РІС‡РµСЂР° Р±С‹Р» СЃРЅР°С‡Р°Р»Р° РїСЂРѕСЃРјРѕС‚СЂ СЃ organic, Р° СЃСЂР°Р·Сѓ СЃР»РµРґРѕРј Р·Р° РЅРёРј - РїСЂРѕСЃРјРѕС‚СЂ СЃ referral
 
--- пока что показывает пользователей, у который 1-й просмотр organic, а 2-й referral
+-- РїРѕРєР° С‡С‚Рѕ РїРѕРєР°Р·С‹РІР°РµС‚ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№, Сѓ РєРѕС‚РѕСЂС‹Р№ 1-Р№ РїСЂРѕСЃРјРѕС‚СЂ organic, Р° 2-Р№ referral
 
 with org_ref_table as (
 select user_id, utm_medium, ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY show_date) as show_order
