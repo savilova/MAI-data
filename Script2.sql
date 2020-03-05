@@ -4,7 +4,7 @@
 Представьте, что в вашем распоряжении есть все ресурсы по сбору статистики. Если вам необходимы дополнительные данные, 
 то опишите, чего не хватает в тестовой базе, чтобы посчитать нужные метрики.*/
 
-select * from content_watch;
+select * from content_watch w left join content_info  i on w.content_id=i.content_id;
 
 /*1.	"Цепляемость" и "крутость" сериала. Нужна какая-то метрика, которая при наличии трёх-четырёх серий сериала позволит 
 сравнить этот сериал по "крутости" с другими сериалами.
@@ -26,11 +26,24 @@ select * from content_watch;
 	- данные слишком разнесены по времени
 	
 Как считаем:
- # посмотревших все серии до серии N вкл / # посмотревших 1-ю серию
+ coolness = # посмотревших все серии до серии N вкл / # посмотревших 1-ю серию
  просмотр = 70% длительности (для учета перемотки повтора и титров) 
 */
 
 
+-- запрос будет примерно такой (не работает из-за недостающих данных)
+with first_watch as (select count(distinct user_id) from content_watch w left join content_info  i on w.content_id=i.content_id
+where compilation_id = /*id нужного сериала*/ -- нужна таблица с названиями и id контента
+and episode = 1
+and show_duration >= 0.75*/*длительность серии*/)
+
+select count(*)/first_watch from 
+(select distinct user_id from content_watch w left join content_info  i on w.content_id=i.content_id
+where compilation_id = /*id нужного сериала*/ -- нужна таблица с названиями и id контента
+and episode between 1 and N
+and show_duration >= 0.75*/*длительность серии*/
+group by user_id
+having count(*)= N)
 
 
 
