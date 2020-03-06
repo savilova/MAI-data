@@ -37,8 +37,8 @@ where compilation_id = /*id нужного сериала*/ -- нужна таб
 and episode = 1
 and show_duration >= 0.75*/*длительность серии*/)
 
-select count(*)/first_watch from 
-(select distinct user_id from content_watch w left join content_info  i on w.content_id=i.content_id
+select 100*count(*)/first_watch from 
+(select user_id from content_watch w left join content_info  i on w.content_id=i.content_id
 where compilation_id = /*id нужного сериала*/ -- нужна таблица с названиями и id контента
 and episode between 1 and N
 and show_duration >= 0.75*/*длительность серии*/
@@ -47,11 +47,36 @@ having count(*)= N)
 
 
 
---2.	Ретеншн всех пользователей сервиса. Нужно просегментировать аудиторию, рассчитать её ретеншн по сегментам и дать 
---рекомендации по тому, как увеличить ретеншн каждого из сегментов
+/*2.	Ретеншн всех пользователей сервиса. Нужно просегментировать аудиторию, рассчитать её ретеншн по сегментам и дать 
+рекомендации по тому, как увеличить ретеншн каждого из сегментов
 
+- ретеншн: retention7 = # посмотревших сегодня / # в первый раз посмотревших 7 дней назад * 100%
+*/
 
--- простая сегментация:  total show duration,
--- rfm анализ по просмотрам
--- ретеншн: retention7 = # посмотревших сегодня / # в первый раз посмотревших 7 дней назад * 100%
--- табличка rf-m
+-- сегментируем по частоте и длительности просмотров
+with user_segments as ( select user_id, last_show,
+							   ntile(2) over (order by duration) as duration_rank, -- "топорные" сегменты часто-редко, много-мало
+							   ntile(2) over (order by frequency) as frequency_rank, -- для сегментации "вручную" нужно больше изучить датасет
+		                from (select user_id,
+				 	 				 avg(show_duration) as duration,
+				 	 				 count(*) as frequency
+				 	 				 date_trunc('day', max(show_date)) as last_show,
+				 	 				 date_trunc('day',min(show_date)) as first_show
+			  				  from content_watch
+			  				  group by user_id
+			  				  having first_show = now()::date - N
+)
+select count(*) as retention from user_segments
+group by last_show
+order by last_show;
+
+/*
+ Возможные рекомендации по сегментам:
+F D Гипотеза                                      Рекомендация
+
+1 1 Интересует только один сериал                 Показать похожие, как только закончится текущий сериал 
+1 2 Смотрят кино дома по выходным                 напомнить про возможность смотреть HD на разных языках 
+2 1 Мультики по утрам/вечерам                     Больше рекомендовать контент, где очень много серий?
+2 2 Смотрят еще и по будням по дороге не работу   Субтитры и офлайн воспроизведение для мобильных 
+
+ */
