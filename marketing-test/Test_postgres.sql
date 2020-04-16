@@ -1,36 +1,48 @@
---1.	Кол-во просмотров по дням суммарно на двух платформах - 10 и 11
-select count(*) from watch_records
+--Р”РёР°Р»РµРєС‚ PostgreSQL
+--РўР°Р±Р»РёС†Р° РёР· Р·Р°РґР°РЅРёСЏ Р·РґРµСЃСЊ РЅР°Р·С‹РІР°РµС‚СЃСЏ watch_records
+
+--1.	РљРѕР»-РІРѕ РїСЂРѕСЃРјРѕС‚СЂРѕРІ РїРѕ РґРЅСЏРј СЃСѓРјРјР°СЂРЅРѕ РЅР° РґРІСѓС… РїР»Р°С‚С„РѕСЂРјР°С… - 10 Рё 11
+select date(show_date) as watch_date, count(*) watch_count from watch_records
 where platform in (10,11)
-group by date_trunc('day', show_date);
+group by watch_date;
 
---2.	Кол-во пользователей, смотревших контент в двух разных paid_type за месяц по всем платформам
-select count(distinct user_id) from watch_records
-where date_trunc('day', show_date) >= now() - interval '30' day
-group by user_id
-having count(distinct paid_type)=2;
+--2.	РљРѕР»-РІРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№, СЃРјРѕС‚СЂРµРІС€РёС… РєРѕРЅС‚РµРЅС‚ РІ РґРІСѓС… СЂР°Р·РЅС‹С… paid_type Р·Р° РјРµСЃСЏС† РїРѕ РІСЃРµРј РїР»Р°С‚С„РѕСЂРјР°Рј
+select count(*) from (select user_id from watch_records
+			   		  where date_trunc('month', show_date) = date_trunc('month', now()) -- С‚РµРєСѓС‰РёР№ РјРµСЃСЏС†
+			   		  		and date_trunc('day', show_date) < date_trunc('day', now()) -- РЅРµ РІРєР»СЋС‡Р°СЏ СЃРµРіРѕРґРЅСЏ (РєР°Рє РІР°СЂРёР°РЅС‚)
+			   		  group by user_id
+			   		  having count(distinct paid_type)=2) users;
 
---3.	Доля просмотров более 5 минут от всех просмотров за месяц  
-select count(*), 
-	   concat(100*count(*)/(select count(*) 
-	   from watch_records 
-	   where date_trunc('day', show_date) >= now() - interval '30' day), ' %') as ratio
-	   from watch_records
-where show_duration>600 and date_trunc('day', show_date) >= now() - interval '30' day;
+--3.	Р”РѕР»СЏ РїСЂРѕСЃРјРѕС‚СЂРѕРІ Р±РѕР»РµРµ 5 РјРёРЅСѓС‚ РѕС‚ РІСЃРµС… РїСЂРѕСЃРјРѕС‚СЂРѕРІ Р·Р° РјРµСЃСЏС†  
+select concat(100*count(*)/(select count(*) 
+	   						from watch_records 
+	   						where date_trunc('month', show_date) = date_trunc('month', now()) -- С‚РµРєСѓС‰РёР№ РјРµСЃСЏС†
+	   						and date_trunc('day', show_date) < date_trunc('day', now())),     -- РЅРµ РІРєР»СЋС‡Р°СЏ СЃРµРіРѕРґРЅСЏ 
+	   		  ' %') -- РґРѕР»СЏ РІ РїСЂРѕС†РµРЅС‚Р°С…
+	   		  as ratio
+from watch_records
+where show_duration>300 
+and date_trunc('month', show_date) = date_trunc('month', now()) 
+and date_trunc('day', show_date) < date_trunc('day', now());
 
---4.	Суммарная длительность смотрения с разбиением по всем типам кампаний на платформе 583 за последние 30 дней
-select sum(show_duration) from watch_records
-where platform = 583 and date_trunc('day', show_date) > now() - interval '30' day
+--4.	РЎСѓРјРјР°СЂРЅР°СЏ РґР»РёС‚РµР»СЊРЅРѕСЃС‚СЊ СЃРјРѕС‚СЂРµРЅРёСЏ СЃ СЂР°Р·Р±РёРµРЅРёРµРј РїРѕ РІСЃРµРј С‚РёРїР°Рј РєР°РјРїР°РЅРёР№ РЅР° РїР»Р°С‚С„РѕСЂРјРµ 583 Р·Р° РїРѕСЃР»РµРґРЅРёРµ 30 РґРЅРµР№
+select sum(show_duration), campaign from watch_records
+where platform = 583 
+and date_trunc('day', show_date) >= now() - interval '30' day --РїСЂРѕС€РµРґС€РёРµ 30 РґРЅРµР№
+and date_trunc('day', show_date) < date_trunc('day', now()) -- РЅРµ РІРєР»СЋС‡Р°СЏ СЃРµРіРѕРґРЅСЏ
 group by campaign;
 
---5.	Список пользователей, просматривавших paid_type = SVOD более одного раза за сегодня
-select user_id  from watch_records
-where paid_type = 'SVOD' and date_trunc('day', show_date) = date_trunc('day', now()) 
+--5.	РЎРїРёСЃРѕРє РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№, РїСЂРѕСЃРјР°С‚СЂРёРІР°РІС€РёС… paid_type = SVOD Р±РѕР»РµРµ РѕРґРЅРѕРіРѕ СЂР°Р·Р° Р·Р° СЃРµРіРѕРґРЅСЏ
+select user_id from watch_records
+where paid_type = 'SVOD' 
+and date_trunc('day', show_date) = date_trunc('day', now()) 
 group by user_id
 having count(*)>1;
 
---6.       Список пользователей, у которых за сегодня был сначала просмотр с органики, а потом с директа
-
-with t as (select user_id, campaign, lead(campaign, 1) over(partition by user_id order by show_date) as lead_campaign from watch_records
-where date_trunc('day', show_date)= date_trunc('day', now()))
-select user_id from t
+--6.       РЎРїРёСЃРѕРє РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№, Сѓ РєРѕС‚РѕСЂС‹С… Р·Р° СЃРµРіРѕРґРЅСЏ Р±С‹Р» СЃРЅР°С‡Р°Р»Р° РїСЂРѕСЃРјРѕС‚СЂ СЃ РѕСЂРіР°РЅРёРєРё, Р° РїРѕС‚РѕРј СЃ РґРёСЂРµРєС‚Р°
+select user_id from (select user_id, 
+						             campaign,
+						             lead(campaign, 1) over(partition by user_id order by show_date) as lead_campaign 
+						             from watch_records
+						             where date_trunc('day', show_date)= date_trunc('day', now()) ) campaigns
 where campaign='organic' and lead_campaign='direct';
