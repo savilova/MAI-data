@@ -40,9 +40,9 @@ group by user_id
 having count(*)>1;
 
 --6.       Список пользователей, у которых за сегодня был сначала просмотр с органики, а потом с директа
-select user_id from (select user_id, 
-						             campaign,
-						             lead(campaign, 1) over(partition by user_id order by show_date) as lead_campaign 
-						             from watch_records
-						             where date_trunc('day', show_date)= date_trunc('day', now()) ) campaigns
+select distinct user_id from (select user_id, 
+						    campaign,
+						    lead(campaign, 1) over(partition by user_id order by show_date) as lead_campaign 
+						    from watch_records
+						    where date_trunc('day', show_date)= date_trunc('day', now()) ) campaigns
 where campaign='organic' and lead_campaign='direct';
